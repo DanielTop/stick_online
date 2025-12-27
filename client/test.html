@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Тест списка игроков</title>
+    <style>
+        body {
+            background: #0f0f1e;
+            color: white;
+            font-family: Arial;
+            padding: 20px;
+        }
+        .big-btn {
+            background: #4ecdc4;
+            border: 3px solid #fff;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 20px 40px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+        .big-btn:hover {
+            background: #3db8af;
+        }
+        .panel {
+            display: none;
+            background: rgba(0,0,0,0.9);
+            border: 3px solid #4ecdc4;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        .panel.open {
+            display: block;
+        }
+        .player-item {
+            background: rgba(78, 205, 196, 0.2);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 2px solid #4ecdc4;
+        }
+        .player-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4ecdc4;
+            cursor: pointer;
+        }
+        .player-name:hover {
+            text-decoration: underline;
+        }
+        #status {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Тест списка игроков</h1>
+    
+    <div id="status">Подключение...</div>
+    
+    <button class="big-btn" onclick="showPlayers()">📋 ПОКАЗАТЬ СПИСОК ИГРОКОВ</button>
+    <button class="big-btn" onclick="showFriends()">❤️ ПОКАЗАТЬ ДРУЗЕЙ</button>
+    
+    <div id="player-panel" class="panel">
+        <h2>Игроки онлайн:</h2>
+        <div id="player-list"></div>
+    </div>
+    
+    <div id="friend-panel" class="panel">
+        <h2>Друзья:</h2>
+        <div id="friend-list"></div>
+    </div>
+    
+    <div id="log" style="margin-top: 20px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto;"></div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket = io();
+        let otherPlayers = new Map();
+        let friends = [];
+        let myNickname = 'Тестер_' + Math.floor(Math.random() * 1000);
+        
+        function log(msg) {
+            const logEl = document.getElementById('log');
+            logEl.innerHTML += '<div>' + new Date().toLocaleTimeString() + ' - ' + msg + '</div>';
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(msg);
+        }
+        
+        socket.on('connect', () => {
+            log('✅ Подключено к серверу! ID: ' + socket.id);
+            document.getElementById('status').innerHTML = '🟢 Подключено. Мой ник: ' + myNickname;
+            
+            // Отправляем информацию о себе
+            socket.emit('player-join', {
+                x: 5000,
+                y: 5000,
+                power: 'fire',
+                level: 1,
+                nickname: myNickname
+            });
+            log('📤 Отправлен player-join с ником: ' + myNickname);
+        });
+        
+        socket.on('players', (players) => {
+            log('📥 Получен список игроков. Всего: ' + Object.keys(players).length);
+            otherPlayers.clear();
+            
+            Object.entries(players).forEach(([id, data]) => {
+                if (id !== socket.id && data.nickname) {
+                    otherPlayers.set(id, {
+                        id: id,
+                        nickname: data.nickname,
+                        level: data.level || 1
+                    });
+                    log('👤 Игрок: ' + data.nickname + ' (ID: ' + id.substring(0, 8) + '...)');
+                }
+            });
+            
+            updatePlayerList();
+        });
+        
+        socket.on('player-joined', (data) => {
+            if (data.id !== socket.id && data.nickname) {
+                log('➕ Новый игрок присоединился: ' + data.nickname);
+                otherPlayers.set(data.id, {
+                    id: data.id,
+                    nickname: data.nickname,
+                    level: data.level || 1
+                });
+                updatePlayerList();
+            }
+        });
+        
+        socket.on('player-left', (id) => {
+            const player = otherPlayers.get(id);
+            if (player) {
+                log('➖ Игрок вышел: ' + player.nickname);
+                otherPlayers.delete(id);
+                updatePlayerList();
+            }
+        });
+        
+        function showPlayers() {
+            document.getElementById('player-panel').classList.add('open');
+            document.getElementById('friend-panel').classList.remove('open');
+            updatePlayerList();
+        }
+        
+        function showFriends() {
+            document.getElementById('friend-panel').classList.add('open');
+            document.getElementById('player-panel').classList.remove('open');
+            updateFriendList();
+        }
+        
+        function updatePlayerList() {
+            const list = document.getElementById('player-list');
+            list.innerHTML = '';
+            
+            if (otherPlayers.size === 0) {
+                list.innerHTML = '<div style="color: #aaa;">Нет других игроков. Откройте эту страницу в другой вкладке!</div>';
+                return;
+            }
+            
+            otherPlayers.forEach((player, id) => {
+                const isFriend = friends.some(f => f.id === id);
+                const item = document.createElement('div');
+                item.className = 'player-item';
+                item.innerHTML = `
+                    <div class="player-name" onclick="addFriend('${id}', '${player.nickname}')">${player.nickname}</div>
+                    <div>Уровень: ${player.level}</div>
+                    <div style="font-size: 12px; color: #aaa;">ID: ${id.substring(0, 12)}...</div>
+                    ${isFriend ? '<div style="color: #2ecc71;">✓ В друзьях</div>' : '<div style="color: #f39c12; cursor: pointer;" onclick="addFriend(\'' + id + '\', \'' + player.nickname + '\')">➕ Кликните на ник чтобы добавить в друзья</div>'}
+                `;
+                list.appendChild(item);
+            });
+        }
+        
+        function updateFriendList() {
+            const list = document.getElementById('friend-list');
+            list.innerHTML = '';
+            
+            if (friends.length === 0) {
+                list.innerHTML = '<div style="color: #aaa;">Нет друзей. Добавьте игроков из списка!</div>';
+                return;
+            }
+            
+            friends.forEach(friend => {
+                const isOnline = otherPlayers.has(friend.id);
+                const item = document.createElement('div');
+                item.className = 'player-item';
+                item.innerHTML = `
+                    <div class="player-name">${isOnline ? '🟢' : '⚫'} ${friend.nickname}</div>
+                    <div style="font-size: 12px; color: #aaa;">ID: ${friend.id.substring(0, 12)}...</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+        
+        function addFriend(id, nickname) {
+            const exists = friends.some(f => f.id === id);
+            if (exists) {
+                alert('Уже в друзьях!');
+                return;
+            }
+            
+            friends.push({ id, nickname });
+            localStorage.setItem('test_friends', JSON.stringify(friends));
+            log('❤️ Добавлен в друзья: ' + nickname);
+            alert(nickname + ' добавлен в друзья!');
+            
+            updatePlayerList();
+            updateFriendList();
+        }
+        
+        // Load friends
+        const saved = localStorage.getItem('test_friends');
+        if (saved) {
+            friends = JSON.parse(saved);
+            log('📂 Загружено друзей из localStorage: ' + friends.length);
+        }
+    </script>
+</body>
+</html>

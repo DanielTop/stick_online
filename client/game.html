@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Stick MMO - Открытый мир</title>
+    <link rel="stylesheet" href="style.css?v=1766795000">
+</head>
+<body>
+    <!-- Login/Register Screen -->
+    <div id="login-screen" class="screen active">
+        <h1>Stick MMO</h1>
+        <h2>Добро пожаловать!</h2>
+
+        <div class="login-container">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="login">Вход</button>
+                <button class="tab-btn" data-tab="register">Регистрация</button>
+                <button class="tab-btn" data-tab="guest">Гость</button>
+            </div>
+
+            <!-- Login Form -->
+            <div class="tab-content active" id="login-tab">
+                <input type="text" id="login-username" placeholder="Имя пользователя" maxlength="20">
+                <input type="password" id="login-password" placeholder="Пароль" maxlength="30">
+                <button class="submit-btn" id="login-btn">Войти</button>
+                <div class="error-message" id="login-error"></div>
+            </div>
+
+            <!-- Register Form -->
+            <div class="tab-content" id="register-tab">
+                <input type="text" id="register-username" placeholder="Имя пользователя" maxlength="20">
+                <input type="password" id="register-password" placeholder="Пароль" maxlength="30">
+                <input type="password" id="register-password-confirm" placeholder="Повторите пароль" maxlength="30">
+                <button class="submit-btn" id="register-btn">Зарегистрироваться</button>
+                <div class="error-message" id="register-error"></div>
+            </div>
+
+            <!-- Guest Form -->
+            <div class="tab-content" id="guest-tab">
+                <p class="guest-info">Играть без сохранения прогресса</p>
+                <input type="text" id="guest-nickname" placeholder="Введите ник" maxlength="20" value="4545 admin">
+                <button class="submit-btn" id="guest-btn">Играть как гость</button>
+                <button class="quick-start-btn" id="quick-start-btn">⚡ Быстрый старт</button>
+                <div class="error-message" id="guest-error"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server Selection Screen -->
+    <div id="server-selection" class="screen">
+        <h1>Выбор сервера</h1>
+        <h2>Выберите сервер или создайте свой</h2>
+
+        <div class="server-container">
+            <div class="server-list" id="server-list">
+                <!-- Servers will be populated here -->
+            </div>
+
+            <div class="create-server-section">
+                <h3>Создать новый сервер</h3>
+                <input type="text" id="server-name-input" placeholder="Название сервера" maxlength="30">
+                <select id="server-capacity">
+                    <option value="10">10 игроков</option>
+                    <option value="25">25 игроков</option>
+                    <option value="50" selected>50 игроков</option>
+                </select>
+                <button class="submit-btn" id="create-server-btn">Создать сервер</button>
+            </div>
+        </div>
+
+        <!-- Toggle Buttons for Server Selection Screen -->
+        <div class="hud-buttons">
+            <button class="hud-btn" id="toggle-shop-server" title="Магазин">Магазин</button>
+            <button class="hud-btn" id="toggle-player-list-server" title="Список игроков">Список игроков</button>
+            <button class="hud-btn" id="toggle-friends-server" title="Друзья">Друзья</button>
+        </div>
+
+        <!-- Player List Panel -->
+        <div class="player-list-panel" id="player-list-panel-server">
+            <div class="panel-header">
+                <h3>Игроки</h3>
+                <button class="close-panel" id="close-player-list-server">✕</button>
+            </div>
+            <div class="panel-content" id="player-list-content-server">
+                <!-- Players will be listed here -->
+            </div>
+        </div>
+
+        <!-- Friends List Panel -->
+        <div class="friends-panel" id="friends-panel-server">
+            <div class="panel-header">
+                <h3>Друзья</h3>
+                <button class="close-panel" id="close-friends-server">✕</button>
+            </div>
+            <div class="panel-content" id="friends-list-content-server">
+                <!-- Friends will be listed here -->
+            </div>
+        </div>
+
+        <!-- Shop Menu -->
+        <div class="shop-panel" id="shop-panel-server">
+            <div class="panel-header">
+                <h3>💎 Магазин</h3>
+                <button class="close-panel" id="close-shop-server">✕</button>
+            </div>
+            <div class="panel-content">
+                <div class="shop-section">
+                    <h4>⚔️ Мечи</h4>
+                    <div class="shop-items" id="shop-swords-server">
+                        <div class="shop-item" data-item="sword-1" data-cost="500">
+                            <div class="item-icon">🗡️</div>
+                            <div class="item-info">
+                                <div class="item-name">Железный меч</div>
+                                <div class="item-stats">+15 урон</div>
+                                <div class="item-cost">💎 500</div>
+                            </div>
+                        </div>
+                        <div class="shop-item" data-item="sword-2" data-cost="1000">
+                            <div class="item-icon">⚔️</div>
+                            <div class="item-info">
+                                <div class="item-name">Стальной меч</div>
+                                <div class="item-stats">+30 урон</div>
+                                <div class="item-cost">💎 1000</div>
+                            </div>
+                        </div>
+                        <div class="shop-item" data-item="sword-3" data-cost="2000">
+                            <div class="item-icon">🔱</div>
+                            <div class="item-info">
+                                <div class="item-name">Легендарный меч</div>
+                                <div class="item-stats">+60 урон</div>
+                                <div class="item-cost">💎 2000</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="shop-section">
+                    <h4>🛡️ Броня</h4>
+                    <div class="shop-items" id="shop-armor-server">
+                        <div class="shop-item" data-item="armor-1" data-cost="500">
+                            <div class="item-icon">🦺</div>
+                            <div class="item-info">
+                                <div class="item-name">Кожаная броня</div>
+                                <div class="item-stats">+20 HP</div>
+                                <div class="item-cost">💎 500</div>
+                            </div>
+                        </div>
+                        <div class="shop-item" data-item="armor-2" data-cost="1000">
+                            <div class="item-icon">🛡️</div>
+                            <div class="item-info">
+                                <div class="item-name">Стальная броня</div>
+                                <div class="item-stats">+50 HP</div>
+                                <div class="item-cost">💎 1000</div>
+                            </div>
+                        </div>
+                        <div class="shop-item" data-item="armor-3" data-cost="2000">
+                            <div class="item-icon">⚜️</div>
+                            <div class="item-info">
+                                <div class="item-name">Королевская броня</div>
+                                <div class="item-stats">+100 HP</div>
+                                <div class="item-cost">💎 2000</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Selection Screen -->
+    <div id="device-selection" class="screen">
+        <h1>Stick MMO</h1>
+        <h2>Выберите устройство</h2>
+        <div class="button-container">
+            <button class="device-btn" data-device="pc">
+                <div class="icon">🖥️</div>
+                <div>ПК</div>
+                <div class="hint">WASD + Мышь</div>
+            </button>
+            <button class="device-btn" data-device="mobile">
+                <div class="icon">📱</div>
+                <div>Телефон</div>
+                <div class="hint">Сенсорное управление</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Power Selection Screen -->
+    <div id="power-selection" class="screen">
+        <h1>Выберите силу</h1>
+        <div class="button-container">
+            <button class="power-btn" data-power="fire">
+                <div class="icon">🔥</div>
+                <div>Огонь</div>
+                <div class="stats">
+                    <div>+ Урон</div>
+                    <div>+ Скорость атаки</div>
+                </div>
+            </button>
+            <button class="power-btn" data-power="ice">
+                <div class="icon">❄️</div>
+                <div>Холод</div>
+                <div class="stats">
+                    <div>+ Контроль</div>
+                    <div>+ Защита</div>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen">
+        <h2>Загрузка...</h2>
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+        <p id="loading-text">Подключение к серверу...</p>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen">
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hud-top">
+                <div class="player-info">
+                    <div class="health-bar-container">
+                        <div class="label">HP</div>
+                        <div class="bar-bg">
+                            <div id="health-bar" class="bar health"></div>
+                        </div>
+                        <div class="value"><span id="health-value">100</span>/100</div>
+                    </div>
+                    <div class="exp-bar-container">
+                        <div class="label">Level <span id="player-level">1</span></div>
+                        <div class="bar-bg">
+                            <div id="exp-bar" class="bar exp"></div>
+                        </div>
+                        <div class="value"><span id="exp-value">0</span>/100</div>
+                    </div>
+                    <div class="evoluta-display">
+                        <span class="evoluta-icon">💎</span>
+                        <span id="evoluta-value">0</span> Эволюта
+                    </div>
+                </div>
+                <div class="minimap" id="minimap"></div>
+            </div>
+
+            <div class="abilities-container">
+                <div class="abilities abilities-row-1">
+                    <div class="ability" id="ability-1">
+                        <div class="ability-key">Q</div>
+                        <div class="ability-icon">🔥</div>
+                        <div class="cooldown"></div>
+                    </div>
+                    <div class="ability" id="ability-2">
+                        <div class="ability-key">E</div>
+                        <div class="ability-icon">💥</div>
+                        <div class="cooldown"></div>
+                    </div>
+                    <div class="ability" id="ability-3">
+                        <div class="ability-key">R</div>
+                        <div class="ability-icon">⚡</div>
+                        <div class="cooldown"></div>
+                    </div>
+                </div>
+                <div class="abilities abilities-row-2" id="unlockable-abilities">
+                    <!-- Unlockable abilities will appear here -->
+                </div>
+            </div>
+
+            <div class="online-players">
+                <div class="label">Игроки онлайн: <span id="player-count">1</span></div>
+            </div>
+
+            <!-- Player List Panel -->
+            <div class="player-list-panel" id="player-list-panel">
+                <div class="panel-header">
+                    <h3>Игроки</h3>
+                    <button class="close-panel" id="close-player-list">✕</button>
+                </div>
+                <div class="panel-content" id="player-list-content">
+                    <!-- Players will be listed here -->
+                </div>
+            </div>
+
+            <!-- Friends List Panel -->
+            <div class="friends-panel" id="friends-panel">
+                <div class="panel-header">
+                    <h3>Друзья</h3>
+                    <button class="close-panel" id="close-friends">✕</button>
+                </div>
+                <div class="panel-content" id="friends-list-content">
+                    <!-- Friends will be listed here -->
+                </div>
+            </div>
+
+            <!-- Shop Menu -->
+            <div class="shop-panel" id="shop-panel">
+                <div class="panel-header">
+                    <h3>💎 Магазин</h3>
+                    <button class="close-panel" id="close-shop">✕</button>
+                </div>
+                <div class="panel-content">
+                    <div class="shop-section">
+                        <h4>⚔️ Мечи</h4>
+                        <div class="shop-items" id="shop-swords">
+                            <div class="shop-item" data-item="sword-1" data-cost="500">
+                                <div class="item-icon">🗡️</div>
+                                <div class="item-info">
+                                    <div class="item-name">Железный меч</div>
+                                    <div class="item-stats">+15 урон</div>
+                                    <div class="item-cost">💎 500</div>
+                                </div>
+                            </div>
+                            <div class="shop-item" data-item="sword-2" data-cost="1000">
+                                <div class="item-icon">⚔️</div>
+                                <div class="item-info">
+                                    <div class="item-name">Стальной меч</div>
+                                    <div class="item-stats">+30 урон</div>
+                                    <div class="item-cost">💎 1000</div>
+                                </div>
+                            </div>
+                            <div class="shop-item" data-item="sword-3" data-cost="2000">
+                                <div class="item-icon">🔱</div>
+                                <div class="item-info">
+                                    <div class="item-name">Легендарный меч</div>
+                                    <div class="item-stats">+60 урон</div>
+                                    <div class="item-cost">💎 2000</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="shop-section">
+                        <h4>🛡️ Броня</h4>
+                        <div class="shop-items" id="shop-armor">
+                            <div class="shop-item" data-item="armor-1" data-cost="500">
+                                <div class="item-icon">🦺</div>
+                                <div class="item-info">
+                                    <div class="item-name">Кожаная броня</div>
+                                    <div class="item-stats">+20 HP</div>
+                                    <div class="item-cost">💎 500</div>
+                                </div>
+                            </div>
+                            <div class="shop-item" data-item="armor-2" data-cost="1000">
+                                <div class="item-icon">🛡️</div>
+                                <div class="item-info">
+                                    <div class="item-name">Стальная броня</div>
+                                    <div class="item-stats">+50 HP</div>
+                                    <div class="item-cost">💎 1000</div>
+                                </div>
+                            </div>
+                            <div class="shop-item" data-item="armor-3" data-cost="2000">
+                                <div class="item-icon">⚜️</div>
+                                <div class="item-info">
+                                    <div class="item-name">Королевская броня</div>
+                                    <div class="item-stats">+100 HP</div>
+                                    <div class="item-cost">💎 2000</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toggle Buttons -->
+            <div class="hud-buttons">
+                <button class="hud-btn" id="toggle-player-list" title="Список игроков">Список игроков</button>
+                <button class="hud-btn exit-btn" id="exit-server-btn" title="Выйти из сервера">Выйти из сервера</button>
+            </div>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Mobile Controls -->
+        <div id="mobile-controls" class="hidden">
+            <div class="joystick-container" id="movement-joystick">
+                <div class="joystick-base">
+                    <div class="joystick-stick"></div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-btn" id="attack-btn">⚔️</button>
+                <button class="action-btn" id="ability1-btn">Q</button>
+                <button class="action-btn" id="ability2-btn">E</button>
+                <button class="action-btn" id="ability3-btn">R</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div id="connection-status" class="hidden">
+        <span id="status-indicator">●</span>
+        <span id="status-text">Подключено</span>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js?v=1766795000"></script>
+</body>
+</html>
