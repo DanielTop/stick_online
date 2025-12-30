@@ -3370,6 +3370,12 @@ function initNewYearEvent() {
     // Create Ded Moroz NPC
     GAME.dedMoroz = new DedMoroz();
 
+    // Make functions globally accessible for onclick handlers
+    window.showPromoCodeInput = showPromoCodeInput;
+    window.showQuestPanel = showQuestPanel;
+    window.checkPromoCode = checkPromoCode;
+    window.updateEventHUD = updateEventHUD;
+
     // Update event HUD
     updateEventHUD();
     setInterval(updateEventHUD, 5000);
