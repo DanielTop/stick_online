@@ -13,7 +13,10 @@ const CONFIG = {
     BASE_PLAYER_SPEED: 5,
     TILE_SIZE: 100,
     MAX_LEVEL: 30,
-    MAX_PLAYERS: 50
+    MAX_PLAYERS: 50,
+    // New Year Event (until January 19, 2026)
+    EVENT_END_DATE: new Date('2026-01-19T23:59:59'),
+    PROMO_CODE: 'NEWGEAR2026'
 };
 
 // Game State
@@ -42,7 +45,13 @@ const GAME = {
     lastUpdate: Date.now(),
     gameLoop: null,
     friends: [],
-    servers: []
+    servers: [],
+    // New Year Event
+    christmasBalls: 0,
+    completedQuests: [],
+    dedMoroz: null,
+    snowmanUnlocked: false,
+    promoCodeUsed: false
 };
 
 // ============================================
@@ -679,6 +688,7 @@ function startGame() {
         initControls();
         initSocket();
         initPlayerListAndFriends();
+        initNewYearEvent();
         updateLoadingProgress(100, 'Готово!');
 
         setTimeout(() => {
@@ -794,7 +804,12 @@ class World {
         // Add decorations based on zone themes
         this.zones.forEach(zone => {
             const decorCount = 30;
-            const decorTypes = this.getDecorationsForZone(zone);
+            let decorTypes = this.getDecorationsForZone(zone);
+
+            // Add New Year decorations if event is active
+            if (isNewYearEventActive && isNewYearEventActive()) {
+                decorTypes = [...decorTypes, '🎄', '🎁', '⛄', '❄️', '🎅', '⭐'];
+            }
 
             for (let i = 0; i < decorCount; i++) {
                 const x = zone.x + Math.random() * zone.width;
@@ -962,6 +977,12 @@ class Player {
             sword: null,
             armor: null
         };
+
+        // New Year Event
+        this.christmasBalls = 0;
+        this.completedQuests = [];
+        this.snowmanUnlocked = false;
+        this.promoCodeUsed = false;
 
         // Abilities
         this.abilities = this.initAbilities();
@@ -1277,7 +1298,12 @@ class Player {
             speed: this.speed,
             abilities: this.abilities,
             evoluta: this.evoluta,
-            equipment: this.equipment
+            equipment: this.equipment,
+            // New Year Event
+            christmasBalls: this.christmasBalls,
+            completedQuests: this.completedQuests,
+            snowmanUnlocked: this.snowmanUnlocked,
+            promoCodeUsed: this.promoCodeUsed
         };
 
         accountSystem.updateStats(GAME.username, progress);
@@ -1293,6 +1319,12 @@ class Player {
             this.evoluta = data.evoluta || 0;
             this.equipment = data.equipment || { sword: null, armor: null };
 
+            // New Year Event
+            this.christmasBalls = data.christmasBalls || 0;
+            this.completedQuests = data.completedQuests || [];
+            this.snowmanUnlocked = data.snowmanUnlocked || false;
+            this.promoCodeUsed = data.promoCodeUsed || false;
+
             // Restore abilities
             if (data.abilities) {
                 this.abilities = { ...this.abilities, ...data.abilities };
@@ -1306,6 +1338,20 @@ class Player {
                     this.unlockAbilityForLevel(lvl);
                 }
             }
+
+            // Restore snowman ability if unlocked
+            if (this.snowmanUnlocked && !this.abilities['x']) {
+                this.abilities['x'] = {
+                    key: 'x',
+                    name: 'Снеговик',
+                    damage: 100,
+                    cooldown: 15000,
+                    lastUsed: 0,
+                    color: '#ffffff',
+                    icon: '☃️',
+                    type: 'event'
+                };
+            }
         }
     }
 
@@ -1314,6 +1360,56 @@ class Player {
         this.health = this.maxHealth;
         this.x = CONFIG.WORLD_WIDTH / 2;
         this.y = CONFIG.WORLD_HEIGHT / 2;
+    }
+
+    unlockSnowmanAbility() {
+        if (this.snowmanUnlocked) {
+            showNotification('❄️ Снеговик уже разблокирован!', 'info');
+            return false;
+        }
+
+        if (!this.promoCodeUsed) {
+            showNotification('❌ Сначала введите промокод!', 'error');
+            return false;
+        }
+
+        if (this.christmasBalls < 15) {
+            showNotification(`❌ Нужно 15 шариков! У вас: ${this.christmasBalls}`, 'error');
+            return false;
+        }
+
+        // Unlock snowman ability
+        this.christmasBalls -= 15;
+        this.snowmanUnlocked = true;
+        this.abilities['x'] = {
+            key: 'x',
+            name: 'Снеговик',
+            damage: 100,
+            cooldown: 15000,
+            lastUsed: 0,
+            color: '#ffffff',
+            icon: '☃️',
+            type: 'event'
+        };
+
+        addAbilityToHUD(this.abilities['x']);
+        showNotification('🎉 Способность "Снеговик" разблокирована!', 'success');
+        updateEventHUD();
+        this.saveProgress();
+        return true;
+    }
+
+    completeQuest(questId) {
+        if (this.completedQuests.includes(questId)) {
+            return false;
+        }
+
+        this.completedQuests.push(questId);
+        this.christmasBalls += 1;
+        showNotification('🎄 Квест выполнен! +1 елочный шарик', 'success');
+        updateEventHUD();
+        this.saveProgress();
+        return true;
     }
 }
 
@@ -1575,10 +1671,10 @@ function initKeyboardControls() {
             }
         }
 
-        // New level-up abilities (all 30 abilities)
+        // New level-up abilities (all 30 abilities + event abilities)
         const abilityKeys = ['t', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\',
                             '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
-                            'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'z'];
+                            'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'z', 'x'];
         const key = e.key.toLowerCase();
         if (abilityKeys.includes(key) && GAME.player.abilities[key]) {
             const ability = GAME.player.abilities[key];
@@ -2796,6 +2892,11 @@ function render() {
     // Draw other players
     GAME.otherPlayers.forEach(player => player.draw(ctx, camera));
 
+    // Draw Ded Moroz (New Year Event)
+    if (GAME.dedMoroz && isNewYearEventActive()) {
+        GAME.dedMoroz.draw(ctx, camera);
+    }
+
     // Draw player
     GAME.player.draw(ctx, camera);
 
@@ -2867,6 +2968,413 @@ function startGameLoop() {
     }
 
     loop();
+}
+
+// ============================================
+// NEW YEAR EVENT
+// ============================================
+
+// Check if event is active
+function isNewYearEventActive() {
+    return new Date() < CONFIG.EVENT_END_DATE;
+}
+
+// DedMoroz NPC Class
+class DedMoroz {
+    constructor() {
+        this.x = CONFIG.WORLD_WIDTH / 2;
+        this.y = CONFIG.WORLD_HEIGHT / 2 + 200;
+        this.size = 50;
+        this.icon = '🎅';
+        this.quests = this.initQuests();
+    }
+
+    initQuests() {
+        return [
+            {
+                id: 'quest_1',
+                name: 'Убей 10 врагов',
+                description: 'Победи 10 врагов в любой зоне',
+                type: 'kill_enemies',
+                target: 10,
+                progress: 0,
+                reward: 1
+            },
+            {
+                id: 'quest_2',
+                name: 'Достигни 5 уровня',
+                description: 'Прокачайся до 5 уровня',
+                type: 'reach_level',
+                target: 5,
+                progress: 0,
+                reward: 1
+            },
+            {
+                id: 'quest_3',
+                name: 'Собери 5000 эволюты',
+                description: 'Накопи 5000 эволюты',
+                type: 'collect_evoluta',
+                target: 5000,
+                progress: 0,
+                reward: 1
+            },
+            {
+                id: 'quest_4',
+                name: 'Победи босса',
+                description: 'Убей любого босса',
+                type: 'kill_boss',
+                target: 1,
+                progress: 0,
+                reward: 2
+            },
+            {
+                id: 'quest_5',
+                name: 'Посети все зоны',
+                description: 'Исследуй все 15 зон мира',
+                type: 'visit_zones',
+                target: 15,
+                progress: 0,
+                reward: 3
+            }
+        ];
+    }
+
+    draw(ctx, camera) {
+        if (!isNewYearEventActive()) return;
+
+        const screenX = this.x - camera.x;
+        const screenY = this.y - camera.y;
+
+        // Draw Ded Moroz icon
+        ctx.font = '60px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.icon, screenX, screenY);
+
+        // Draw name
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#ffd700';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeText('Дед Мороз', screenX, screenY - 40);
+        ctx.fillText('Дед Мороз', screenX, screenY - 40);
+
+        // Draw quest indicator
+        ctx.fillStyle = '#4ecdc4';
+        ctx.fillText('❗ Квесты', screenX, screenY + 40);
+    }
+
+    interact() {
+        showQuestPanel();
+    }
+
+    isNear(playerX, playerY) {
+        const dx = playerX - this.x;
+        const dy = playerY - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance < 100;
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    const colors = {
+        success: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        error: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+        info: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)'
+    };
+
+    notification.style.cssText = `
+        position: fixed;
+        top: 100px;
+        right: 20px;
+        background: ${colors[type]};
+        padding: 15px 25px;
+        border-radius: 10px;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        animation: slideInRight 0.3s ease-out;
+    `;
+
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Update event HUD
+function updateEventHUD() {
+    if (!isNewYearEventActive()) {
+        const eventHUD = document.getElementById('event-hud');
+        if (eventHUD) eventHUD.style.display = 'none';
+        return;
+    }
+
+    let eventHUD = document.getElementById('event-hud');
+    if (!eventHUD) {
+        eventHUD = document.createElement('div');
+        eventHUD.id = 'event-hud';
+        eventHUD.style.cssText = `
+            position: absolute;
+            top: 150px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            z-index: 100;
+            min-width: 200px;
+            backdrop-filter: blur(10px);
+            border: 2px solid #4ecdc4;
+        `;
+        document.getElementById('hud').appendChild(eventHUD);
+    }
+
+    const daysLeft = Math.ceil((CONFIG.EVENT_END_DATE - new Date()) / (1000 * 60 * 60 * 24));
+
+    eventHUD.innerHTML = `
+        <div style="text-align: center; margin-bottom: 10px; font-size: 16px; font-weight: bold; color: #ffd700;">
+            🎄 Новогодний Ивент 🎄
+        </div>
+        <div style="margin: 5px 0;">
+            🎁 Шарики: <span style="color: #4ecdc4; font-weight: bold;">${GAME.player.christmasBalls}</span>
+        </div>
+        <div style="margin: 5px 0;">
+            ☃️ Снеговик: <span style="color: ${GAME.player.snowmanUnlocked ? '#2ecc71' : '#e74c3c'};">
+                ${GAME.player.snowmanUnlocked ? 'Разблокирован ✓' : 'Заблокирован'}
+            </span>
+        </div>
+        <div style="margin: 5px 0;">
+            🎟️ Промокод: <span style="color: ${GAME.player.promoCodeUsed ? '#2ecc71' : '#e74c3c'};">
+                ${GAME.player.promoCodeUsed ? 'Использован ✓' : 'Не введен'}
+            </span>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #aaa;">
+            ⏰ Осталось: ${daysLeft} дн.
+        </div>
+        <button onclick="showPromoCodeInput()" style="
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            background: #667eea;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        ">Ввести промокод</button>
+        <button onclick="GAME.dedMoroz.interact()" style="
+            width: 100%;
+            margin-top: 5px;
+            padding: 8px;
+            background: #2ecc71;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        ">Квесты Деда Мороза</button>
+        <button onclick="GAME.player.unlockSnowmanAbility()" style="
+            width: 100%;
+            margin-top: 5px;
+            padding: 8px;
+            background: #e74c3c;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        ">Разблокировать Снеговика</button>
+    `;
+}
+
+// Show quest panel
+function showQuestPanel() {
+    let panel = document.getElementById('quest-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'quest-panel';
+        panel.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            color: white;
+            z-index: 10001;
+            min-width: 500px;
+            max-width: 600px;
+            border: 3px solid #4ecdc4;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+        `;
+        document.body.appendChild(panel);
+    }
+
+    const quests = GAME.dedMoroz.quests;
+    let questsHTML = '<h2 style="text-align: center; color: #ffd700;">🎅 Квесты Деда Мороза 🎅</h2>';
+
+    quests.forEach(quest => {
+        const completed = GAME.player.completedQuests.includes(quest.id);
+        questsHTML += `
+            <div style="
+                background: rgba(255, 255, 255, 0.1);
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 10px;
+                border-left: 4px solid ${completed ? '#2ecc71' : '#4ecdc4'};
+            ">
+                <div style="font-weight: bold; font-size: 16px; color: ${completed ? '#2ecc71' : '#ffd700'};">
+                    ${completed ? '✓' : '❗'} ${quest.name}
+                </div>
+                <div style="font-size: 14px; color: #aaa; margin: 5px 0;">
+                    ${quest.description}
+                </div>
+                <div style="font-size: 14px; color: #4ecdc4;">
+                    Награда: ${quest.reward} 🎁 елочный шарик${quest.reward > 1 ? 'а' : ''}
+                </div>
+                <div style="font-size: 12px; color: ${completed ? '#2ecc71' : '#e74c3c'}; margin-top: 5px;">
+                    ${completed ? 'Выполнено!' : 'В процессе...'}
+                </div>
+            </div>
+        `;
+    });
+
+    questsHTML += `
+        <button onclick="document.getElementById('quest-panel').remove()" style="
+            width: 100%;
+            margin-top: 20px;
+            padding: 10px;
+            background: #e74c3c;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        ">Закрыть</button>
+    `;
+
+    panel.innerHTML = questsHTML;
+}
+
+// Show promo code input
+function showPromoCodeInput() {
+    if (GAME.player.promoCodeUsed) {
+        showNotification('✓ Промокод уже использован!', 'info');
+        return;
+    }
+
+    let panel = document.getElementById('promo-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'promo-panel';
+        panel.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            color: white;
+            z-index: 10002;
+            min-width: 400px;
+            border: 3px solid #ffd700;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+        `;
+        document.body.appendChild(panel);
+    }
+
+    panel.innerHTML = `
+        <h2 style="text-align: center; color: #ffd700;">🎟️ Ввод Промокода</h2>
+        <p style="text-align: center; color: #aaa;">
+            Введите секретный промокод для разблокировки способности Снеговик
+        </p>
+        <input type="text" id="promo-input" placeholder="Введите промокод" style="
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 2px solid #4ecdc4;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-align: center;
+            text-transform: uppercase;
+            margin: 20px 0;
+        ">
+        <button onclick="checkPromoCode()" style="
+            width: 100%;
+            padding: 12px;
+            background: #2ecc71;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        ">Активировать</button>
+        <button onclick="document.getElementById('promo-panel').remove()" style="
+            width: 100%;
+            padding: 12px;
+            background: #e74c3c;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        ">Отмена</button>
+        <div style="margin-top: 20px; padding: 10px; background: rgba(255, 193, 7, 0.2); border-radius: 5px; font-size: 12px; color: #ffc107;">
+            💡 Подсказка: Промокод состоит из слова NEWGEAR и года
+        </div>
+    `;
+
+    setTimeout(() => document.getElementById('promo-input').focus(), 100);
+}
+
+// Check promo code
+function checkPromoCode() {
+    const input = document.getElementById('promo-input');
+    const code = input.value.trim().toUpperCase();
+
+    if (code === CONFIG.PROMO_CODE) {
+        GAME.player.promoCodeUsed = true;
+        GAME.player.saveProgress();
+        showNotification('🎉 Промокод активирован! Теперь можете разблокировать Снеговика!', 'success');
+        document.getElementById('promo-panel').remove();
+        updateEventHUD();
+    } else {
+        showNotification('❌ Неверный промокод!', 'error');
+        input.value = '';
+        input.style.borderColor = '#e74c3c';
+        setTimeout(() => {
+            input.style.borderColor = '#4ecdc4';
+        }, 500);
+    }
+}
+
+// Initialize New Year Event
+function initNewYearEvent() {
+    if (!isNewYearEventActive()) return;
+
+    // Create Ded Moroz NPC
+    GAME.dedMoroz = new DedMoroz();
+
+    // Update event HUD
+    updateEventHUD();
+    setInterval(updateEventHUD, 5000);
+
+    console.log('🎄 New Year Event initialized! Event ends:', CONFIG.EVENT_END_DATE);
 }
 
 // ============================================
