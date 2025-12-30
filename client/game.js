@@ -3159,7 +3159,7 @@ function updateEventHUD() {
         <div style="margin-top: 10px; font-size: 12px; color: #aaa;">
             ⏰ Осталось: ${daysLeft} дн.
         </div>
-        <button onclick="showPromoCodeInput()" style="
+        <button onclick="window.showPromoCodeInput()" style="
             width: 100%;
             margin-top: 10px;
             padding: 8px;
@@ -3170,7 +3170,7 @@ function updateEventHUD() {
             font-weight: bold;
             cursor: pointer;
         ">Ввести промокод</button>
-        <button onclick="GAME.dedMoroz.interact()" style="
+        <button onclick="window.showQuestPanel()" style="
             width: 100%;
             margin-top: 5px;
             padding: 8px;
@@ -3181,7 +3181,7 @@ function updateEventHUD() {
             font-weight: bold;
             cursor: pointer;
         ">Квесты Деда Мороза</button>
-        <button onclick="GAME.player.unlockSnowmanAbility()" style="
+        <button onclick="window.unlockSnowman()" style="
             width: 100%;
             margin-top: 5px;
             padding: 8px;
@@ -3249,7 +3249,7 @@ function showQuestPanel() {
     });
 
     questsHTML += `
-        <button onclick="document.getElementById('quest-panel').remove()" style="
+        <button onclick="window.closeQuestPanel()" style="
             width: 100%;
             margin-top: 20px;
             padding: 10px;
@@ -3264,6 +3264,18 @@ function showQuestPanel() {
     `;
 
     panel.innerHTML = questsHTML;
+}
+
+// Close quest panel
+function closeQuestPanel() {
+    const panel = document.getElementById('quest-panel');
+    if (panel) panel.remove();
+}
+
+// Close promo panel
+function closePromoPanel() {
+    const panel = document.getElementById('promo-panel');
+    if (panel) panel.remove();
 }
 
 // Show promo code input
@@ -3311,7 +3323,7 @@ function showPromoCodeInput() {
             text-transform: uppercase;
             margin: 20px 0;
         ">
-        <button onclick="checkPromoCode()" style="
+        <button onclick="window.checkPromoCode()" style="
             width: 100%;
             padding: 12px;
             background: #2ecc71;
@@ -3323,7 +3335,7 @@ function showPromoCodeInput() {
             cursor: pointer;
             margin-bottom: 10px;
         ">Активировать</button>
-        <button onclick="document.getElementById('promo-panel').remove()" style="
+        <button onclick="window.closePromoPanel()" style="
             width: 100%;
             padding: 12px;
             background: #e74c3c;
@@ -3351,7 +3363,7 @@ function checkPromoCode() {
         GAME.player.promoCodeUsed = true;
         GAME.player.saveProgress();
         showNotification('🎉 Промокод активирован! Теперь можете разблокировать Снеговика!', 'success');
-        document.getElementById('promo-panel').remove();
+        closePromoPanel();
         updateEventHUD();
     } else {
         showNotification('❌ Неверный промокод!', 'error');
@@ -3370,11 +3382,21 @@ function initNewYearEvent() {
     // Create Ded Moroz NPC
     GAME.dedMoroz = new DedMoroz();
 
+    // Make GAME globally accessible for debugging
+    window.GAME = GAME;
+
     // Make functions globally accessible for onclick handlers
     window.showPromoCodeInput = showPromoCodeInput;
     window.showQuestPanel = showQuestPanel;
     window.checkPromoCode = checkPromoCode;
     window.updateEventHUD = updateEventHUD;
+    window.closeQuestPanel = closeQuestPanel;
+    window.closePromoPanel = closePromoPanel;
+    window.unlockSnowman = function() {
+        if (GAME.player) {
+            GAME.player.unlockSnowmanAbility();
+        }
+    };
 
     // Update event HUD
     updateEventHUD();
