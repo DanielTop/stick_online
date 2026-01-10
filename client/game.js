@@ -633,6 +633,11 @@ function initScreens() {
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
+
+    // Initialize New Year Event on server selection screen
+    if (screenId === 'server-selection') {
+        initNewYearEventOnServerSelection();
+    }
 }
 
 function exitServer() {
@@ -3403,6 +3408,194 @@ function initNewYearEvent() {
     setInterval(updateEventHUD, 5000);
 
     console.log('🎄 New Year Event initialized! Event ends:', CONFIG.EVENT_END_DATE);
+}
+
+// Initialize New Year Event on Server Selection Screen
+function initNewYearEventOnServerSelection() {
+    if (!isNewYearEventActive()) return;
+
+    // Make GAME globally accessible
+    window.GAME = GAME;
+
+    // Make functions globally accessible for onclick handlers
+    window.showPromoCodeInput = showPromoCodeInputServerSelection;
+    window.showQuestPanel = showQuestPanelServerSelection;
+    window.checkPromoCode = checkPromoCodeServerSelection;
+    window.closeQuestPanel = closeQuestPanel;
+    window.closePromoPanel = closePromoPanel;
+    window.unlockSnowman = unlockSnowmanServerSelection;
+
+    // Update event HUD on server selection screen
+    updateEventHUDServerSelection();
+}
+
+// Update event HUD on server selection screen
+function updateEventHUDServerSelection() {
+    if (!isNewYearEventActive()) return;
+
+    let eventHUD = document.getElementById('event-hud-server');
+    if (!eventHUD) {
+        eventHUD = document.createElement('div');
+        eventHUD.id = 'event-hud-server';
+        eventHUD.style.cssText = `
+            position: fixed;
+            top: 150px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            z-index: 10000;
+            min-width: 200px;
+            backdrop-filter: blur(10px);
+            border: 2px solid #4ecdc4;
+        `;
+        document.body.appendChild(eventHUD);
+    }
+
+    const daysLeft = Math.ceil((CONFIG.EVENT_END_DATE - new Date()) / (1000 * 60 * 60 * 24));
+
+    // Load saved data from localStorage
+    const savedData = GAME.isGuest ? null : (accountSystem.accounts[GAME.username] || {});
+    const christmasBalls = savedData?.christmasBalls || 0;
+    const snowmanUnlocked = savedData?.snowmanUnlocked || false;
+    const promoCodeUsed = savedData?.promoCodeUsed || false;
+
+    eventHUD.innerHTML = `
+        <div style="text-align: center; margin-bottom: 10px; font-size: 16px; font-weight: bold; color: #ffd700;">
+            🎄 Новогодний Ивент 🎄
+        </div>
+        <div style="margin: 5px 0;">
+            🎁 Шарики: <span style="color: #4ecdc4; font-weight: bold;">${christmasBalls}</span>
+        </div>
+        <div style="margin: 5px 0;">
+            ☃️ Снеговик: <span style="color: ${snowmanUnlocked ? '#2ecc71' : '#e74c3c'};">
+                ${snowmanUnlocked ? 'Разблокирован ✓' : 'Заблокирован'}
+            </span>
+        </div>
+        <div style="margin: 5px 0;">
+            🎟️ Промокод: <span style="color: ${promoCodeUsed ? '#2ecc71' : '#e74c3c'};">
+                ${promoCodeUsed ? 'Использован ✓' : 'Не введен'}
+            </span>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #aaa;">
+            ⏰ Осталось: ${daysLeft} дн.
+        </div>
+        <button onclick="window.showPromoCodeInput()" style="
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            background: #667eea;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        ">Ввести промокод</button>
+        <button onclick="window.showQuestPanel()" style="
+            width: 100%;
+            margin-top: 5px;
+            padding: 8px;
+            background: #2ecc71;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        ">Квесты Деда Мороза</button>
+        <button onclick="window.unlockSnowman()" style="
+            width: 100%;
+            margin-top: 5px;
+            padding: 8px;
+            background: #e74c3c;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        ">Разблокировать Снеговика</button>
+    `;
+}
+
+// Show promo code input (Server Selection)
+function showPromoCodeInputServerSelection() {
+    const savedData = GAME.isGuest ? null : (accountSystem.accounts[GAME.username] || {});
+    const promoCodeUsed = savedData?.promoCodeUsed || false;
+
+    if (promoCodeUsed) {
+        showNotification('✓ Промокод уже использован!', 'info');
+        return;
+    }
+
+    showPromoCodeInput();
+}
+
+// Check promo code (Server Selection)
+function checkPromoCodeServerSelection() {
+    const input = document.getElementById('promo-input');
+    const code = input.value.trim().toUpperCase();
+
+    if (code === CONFIG.PROMO_CODE) {
+        if (!GAME.isGuest && accountSystem.accounts[GAME.username]) {
+            accountSystem.accounts[GAME.username].promoCodeUsed = true;
+            accountSystem.saveAccounts();
+            showNotification('🎉 Промокод активирован! Теперь можете разблокировать Снеговика!', 'success');
+            closePromoPanel();
+            updateEventHUDServerSelection();
+        } else {
+            showNotification('❌ Гости не могут использовать промокоды!', 'error');
+        }
+    } else {
+        showNotification('❌ Неверный промокод!', 'error');
+        input.value = '';
+        input.style.borderColor = '#e74c3c';
+        setTimeout(() => {
+            input.style.borderColor = '#4ecdc4';
+        }, 500);
+    }
+}
+
+// Show quest panel (Server Selection)
+function showQuestPanelServerSelection() {
+    showQuestPanel();
+}
+
+// Unlock snowman (Server Selection)
+function unlockSnowmanServerSelection() {
+    const savedData = GAME.isGuest ? null : (accountSystem.accounts[GAME.username] || {});
+
+    if (GAME.isGuest) {
+        showNotification('❌ Гости не могут разблокировать способности!', 'error');
+        return;
+    }
+
+    const snowmanUnlocked = savedData?.snowmanUnlocked || false;
+    const promoCodeUsed = savedData?.promoCodeUsed || false;
+    const christmasBalls = savedData?.christmasBalls || 0;
+
+    if (snowmanUnlocked) {
+        showNotification('❄️ Снеговик уже разблокирован!', 'info');
+        return;
+    }
+
+    if (!promoCodeUsed) {
+        showNotification('❌ Сначала введите промокод!', 'error');
+        return;
+    }
+
+    if (christmasBalls < 15) {
+        showNotification(`❌ Нужно 15 шариков! У вас: ${christmasBalls}`, 'error');
+        return;
+    }
+
+    // Unlock snowman
+    accountSystem.accounts[GAME.username].christmasBalls = christmasBalls - 15;
+    accountSystem.accounts[GAME.username].snowmanUnlocked = true;
+    accountSystem.saveAccounts();
+
+    showNotification('🎉 Способность "Снеговик" разблокирована!', 'success');
+    updateEventHUDServerSelection();
 }
 
 // ============================================
